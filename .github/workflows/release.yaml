@@ -1,0 +1,69 @@
+name: Go Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build_and_release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24'
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+
+      - name: Build for Linux (amd64)
+        run: |
+          GOOS=linux GOARCH=amd64 go install -ldflags="-s -w" github.com/shibukawa/saving/cmd/saving@latest
+          mv /home/runner/go/bin/saving saving-linux-amd64
+      - name: Upload Linux (amd64) binary
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./saving-linux-amd64
+          asset_name: saving-linux-amd64
+
+      - name: Build for Windows (amd64)
+        run: |
+          GOOS=windows GOARCH=amd64 go install -trimpath -ldflags="-s -w" github.com/shibukawa/saving/cmd/saving@latest
+          mv /home/runner/go/bin/windows_amd64/saving.exe saving-windows-amd64.exe
+      - name: Upload Windows (amd64) binary
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./saving-windows-amd64.exe
+          asset_name: saving-windows-amd64.exe
+
+      - name: Build for macOS (arm64)
+        run: |
+          GOOS=darwin GOARCH=arm64 go install -trimpath -ldflags="-s -w" github.com/shibukawa/saving/cmd/saving@latest
+          mv /home/runner/go/bin/darwin_arm64/saving saving-darwin-arm64
+      - name: Upload macOS (arm64) binary
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./saving-darwin-arm64
+          asset_name: saving-darwin-arm64
