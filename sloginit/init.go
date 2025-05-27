@@ -80,7 +80,7 @@ func InitSlog(program string, w io.Writer, verbose bool) (*slog.Logger, LogType,
 	for _, e := range strings.Split(os.Getenv(prefix+"_SLOG_LOG_LEVEL"), ",") {
 		tokens := strings.SplitN(e, "=", 2)
 		if len(tokens) == 2 {
-			result = result.With(strings.TrimSpace(tokens[0]), strings.TrimSpace(tokens[1]))
+			result = result.With(strings.TrimSpace(tokens[0]), os.ExpandEnv(strings.TrimSpace(tokens[1])))
 		}
 	}
 
