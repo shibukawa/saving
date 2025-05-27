@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"sync/atomic"
 	"syscall"
@@ -14,8 +13,6 @@ import (
 )
 
 var ErrHealthCheckFailed = errors.New("health check failed")
-
-const DefaultPidFilename = "SAVING_PID"
 
 type Process struct {
 	drainable *Drainable
@@ -109,7 +106,7 @@ func (p *Process) start() error {
 
 func (p *Process) stop() error {
 	p.Logger.Info("process stop", "pid", p.pid, "access", p.access)
-	os.Remove(p.PidPath)
+	writePid(p.PidPath, nil)
 	process, err := os.FindProcess(p.pid)
 	if err != nil {
 		return err // already terminated
@@ -134,11 +131,4 @@ func (p *Process) stop() error {
 		process.Signal(syscall.SIGKILL)
 	}
 	return nil
-}
-
-func NormalizePidPath(pidPath string) string {
-	if pidPath == "" {
-		return filepath.Join(os.TempDir(), DefaultPidFilename)
-	}
-	return pidPath
 }

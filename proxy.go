@@ -22,10 +22,11 @@ func StartProxy(ctx context.Context, opt Option) error {
 		return err
 	}
 
-	for _, p := range opt.PortToDest {
+	for _, p := range opt.PortMaps {
 		NewSingleProxyServer(ctx, process, p.FromPort, p.Destination)
 	}
 	<-ctx.Done()
+	os.Remove(opt.PidPath)
 	return nil
 }
 
