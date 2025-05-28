@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
+	"runtime"
 	"slices"
 	"strings"
 
@@ -29,6 +30,15 @@ var (
 		`SAVING_SLOG_LOG_EXTRA        : Additional values to log. 'key1=value1,key2=value2' style config is acceptable`,
 	}
 )
+
+func init() {
+	if runtime.GOOS == "linux" {
+		helps = append(helps,
+			``,
+			`SAVING_CRIU_PATH             : Specify CRUI and use it to restore/resume process (default='')`,
+			`SAVING_CRIU_DUMP_PATH        : Specify CRUI dump path (default=$TMP/saving.dump)`)
+	}
+}
 
 func main() {
 	help := flag.Bool("help", false, "Help")
@@ -80,6 +90,13 @@ func main() {
 			slog.Duration("drain_timeout", opt.DrainTimeout),
 			slog.Duration("wake_timeout", opt.WakeTimeout),
 			slog.String("pid_path", opt.PidPath),
+		}
+		if runtime.GOOS == "linux" {
+			attrs = append(attrs, slog.Bool("use_criu", opt.CriuPath != ""))
+			if opt.CriuPath != "" {
+				attrs = append(attrs, slog.String("criu_path", opt.CriuPath))
+				attrs = append(attrs, slog.String("criu_dump_path", opt.CriuDumpPath))
+			}
 		}
 		ports := make([]any, len(opt.PortMaps)*2)
 		for i, p := range opt.PortMaps {

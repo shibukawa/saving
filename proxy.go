@@ -3,7 +3,6 @@ package saving
 import (
 	"bytes"
 	"context"
-	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -11,13 +10,15 @@ import (
 	"time"
 )
 
-func init() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-}
-
 // StartProxy is a main function of this package.
 func StartProxy(ctx context.Context, opt Option) error {
-	process, err := NewProcess(ctx, opt.ToProcessOption())
+	var process ProcessController
+	var err error
+	if opt.CriuPath != "" {
+		process, err = NewCriuProcessController(ctx, opt.ToProcessOption())
+	} else {
+		process, err = NewExecKillProcessController(ctx, opt.ToProcessOption())
+	}
 	if err != nil {
 		return err
 	}
@@ -30,7 +31,7 @@ func StartProxy(ctx context.Context, opt Option) error {
 	return nil
 }
 
-func NewSingleProxyServer(ctx context.Context, process *Process, listeningPort string, dest *url.URL) *http.Server {
+func NewSingleProxyServer(ctx context.Context, process ProcessController, listeningPort string, dest *url.URL) *http.Server {
 	server := &http.Server{
 		Addr: listeningPort,
 		Handler: &httputil.ReverseProxy{

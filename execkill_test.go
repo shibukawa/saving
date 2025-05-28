@@ -48,7 +48,7 @@ func TestExecAndTerminate(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	p, err := NewProcess(ctx, ProcessOption{
+	p, err := NewExecKillProcessController(ctx, ProcessOption{
 		PidPath:            NormalizePidPath(""),
 		HealthCheckUrl:     u,
 		WakeTimeout:        time.Second,
@@ -78,7 +78,7 @@ func TestExecAgain(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	p, err := NewProcess(ctx, ProcessOption{
+	p, err := NewExecKillProcessController(ctx, ProcessOption{
 		PidPath:            NormalizePidPath(""),
 		HealthCheckUrl:     u,
 		WakeTimeout:        time.Second,

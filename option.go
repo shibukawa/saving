@@ -7,13 +7,16 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
 )
 
 const DefaultPidFilename = "SAVING_PID"
+const DefaultCriuDumpFilename = "saving.dump"
 
 type PortMap struct {
 	FromPort    string
@@ -30,6 +33,8 @@ type Option struct {
 	Cmd                string        // Command to execute
 	Args               []string      // Command args
 	PidPath            string        // Pid file that stores the process ID
+	CriuPath           string        // CRIU command path and use it to control process
+	CriuDumpPath       string        // CRIU dump path to store process information
 }
 
 var ErrParseOption = errors.New("parse option error")
@@ -106,6 +111,21 @@ func InitOption(args []string) (*Option, error) {
 		healthCheckUrl.Host = net.JoinHostPort("localhost", healthCheckPort)
 	}
 	result.HealthCheckUrl = healthCheckUrl
+	if runtime.GOOS == "linux" {
+		criuPath := os.Getenv("SAVING_CRIU_PATH")
+		if criuPath != "" {
+			criuPath, err := exec.LookPath(criuPath)
+			if err != nil {
+				errs = append(errs, fmt.Errorf("%w: SAVING_CRIU_PATH: not found: '%s'", ErrParseOption, criuPath))
+			} else {
+				result.CriuPath = criuPath
+			}
+		}
+		result.CriuDumpPath = os.Getenv("SAVING_CRIU_DUMP_PATH")
+		if result.CriuDumpPath == "" {
+			result.CriuDumpPath = filepath.Join(os.TempDir(), DefaultCriuDumpFilename)
+		}
+	}
 	if len(errs) > 0 {
 		return result, errors.Join(errs...)
 	}
@@ -140,6 +160,8 @@ type ProcessOption struct {
 	Cmd                string
 	Args               []string
 	Logger             *slog.Logger
+	CriuPath           string
+	CriuDumpPath       string
 }
 
 func (o Option) ToProcessOption() ProcessOption {
@@ -151,5 +173,7 @@ func (o Option) ToProcessOption() ProcessOption {
 		Cmd:            o.Cmd,
 		Args:           o.Args,
 		Logger:         o.Logger,
+		CriuPath:       o.CriuPath,
+		CriuDumpPath:   o.CriuDumpPath,
 	}
 }

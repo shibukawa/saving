@@ -2,47 +2,29 @@ package saving
 
 import (
 	"context"
-	"errors"
-	"net/url"
 	"os"
 	"os/exec"
-	"strconv"
 	"sync/atomic"
 	"syscall"
 	"time"
 )
 
-var ErrHealthCheckFailed = errors.New("health check failed")
-
-type Process struct {
+type ExecKillProcessController struct {
 	drainable *Drainable
 	pid       int
 	access    uint64
 	ProcessOption
 }
 
-func writePid(pidPath string, healthCheckUrl *url.URL) error {
-	os.Remove(pidPath)
-	f, err := os.Create(pidPath)
-	if err != nil {
-		return err
-	}
-	defer f.Close()
-	f.WriteString(strconv.Itoa(os.Getpid()))
-	if healthCheckUrl != nil {
-		f.WriteString(":")
-		f.WriteString(healthCheckUrl.String())
-	}
-	return nil
-}
+var _ ProcessController = (*ExecKillProcessController)(nil)
 
-func NewProcess(ctx context.Context, opt ProcessOption) (*Process, error) {
+func NewExecKillProcessController(ctx context.Context, opt ProcessOption) (*ExecKillProcessController, error) {
 	err := writePid(opt.PidPath, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	result := &Process{
+	result := &ExecKillProcessController{
 		ProcessOption: opt,
 	}
 
@@ -70,21 +52,20 @@ func NewProcess(ctx context.Context, opt ProcessOption) (*Process, error) {
 	return result, nil
 }
 
-func (p *Process) Exec(callback func()) error {
-	atomic.AddUint64(&p.
-		access, 1)
+func (p *ExecKillProcessController) Exec(callback func()) error {
+	atomic.AddUint64(&p.access, 1)
 	return p.drainable.Exec(callback)
 }
 
-func (p *Process) IsWaking() bool {
+func (p *ExecKillProcessController) IsWaking() bool {
 	return p.drainable.IsWaking()
 }
 
-func (p Process) Pid() int {
+func (p ExecKillProcessController) Pid() int {
 	return p.pid
 }
 
-func (p *Process) start() error {
+func (p *ExecKillProcessController) start() error {
 	atomic.StoreUint64(&p.access, 0)
 	cmd := exec.Command(p.Cmd, p.Args...)
 	cmd.Stdout = os.Stdout
@@ -104,7 +85,7 @@ func (p *Process) start() error {
 	return writePid(p.PidPath, p.HealthCheckUrl)
 }
 
-func (p *Process) stop() error {
+func (p *ExecKillProcessController) stop() error {
 	p.Logger.Info("process stop", "pid", p.pid, "access", p.access)
 	writePid(p.PidPath, nil)
 	process, err := os.FindProcess(p.pid)
