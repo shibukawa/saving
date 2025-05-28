@@ -3,6 +3,17 @@
 
 It reduces memory usage of container until request is coming without sidecar container. This idea is similar to xinetd or systemd socket activation (Accept=no), but it works as a command wrapper.
 
+## FAQ
+
+* Is it good for cloud platform use?
+  - No. Google Cloud's Cloud Run is already have a scale to zero feature. Any other container service uses fixed resources even if the server process is not running.
+* Is it good for development use?
+  - Yes. It reduces memory of local container engines. If you 
+* Is it good for servers written in any programming language?
+  - No. It launches server process when request is coming. If the server process takes too long to start, it is difficult to use.
+* Is it good for databases?
+  - No. It supports only HTTP requests.
+
 ## Usage and Mechanism
 
 It assumed to use with the following Dockerfile definition:
