@@ -8,6 +8,31 @@ It reduces memory usage of container until request is coming without sidecar con
 It assumed to use with the following Dockerfile definition:
 
 ```Dockerfile
+# syntax=docker/dockerfile:1
+
+ARG GO_VERSION=1.24.3
+
+# Download prebuild saving command
+FROM --platform=$BUILDPLATFORM ghcr.io/shibukawa/saving:latest AS install-saving
+
+# Build sample target web service
+FROM --platform=$BUILDPLATFORM golang:${GO_VERSION} AS build-sample
+WORKDIR /work
+RUN --mount=type=cache,target=/go/pkg/mod/ \
+    --mount=type=bind,source=./example/go.mod,target=go.mod \
+    go mod download -x
+ARG TARGETARCH
+RUN --mount=type=cache,target=/go/pkg/mod/ \
+    --mount=type=bind,source=./example/go.mod,target=go.mod \
+    --mount=type=bind,source=./example/server.go,target=server.go \
+    CGO_ENABLED=0 GOARCH=$TARGETARCH go build -o /bin/sample-server .
+
+# Deploy image
+FROM gcr.io/distroless/base-debian12 AS final
+
+COPY --from=install-saving /bin/saving /bin/saving
+COPY --from=build-sample /bin/sample-server /bin/sample-server
+
 EXPOSE 80
 
 ENV SAVING_DRAIN_TIMEOUT=10s
@@ -19,14 +44,12 @@ ENV SAVING_SLOG_LOG_LEVEL=info
 ENV SAVING_SLOG_FORMAT=json
 ENV SAVING_SLOG_ADD_SOURCE=no
 
-# Use this command as entrypoint
 ENTRYPOINT [ "/bin/saving" ]
 HEALTHCHECK CMD ["/bin/saving", "-health-check"]
-# Use server process as command
 CMD [ "/bin/sample-server" ]
 ```
 
-`saving` command is works as a `ENTRYPOINT` like shell. And also works as a health checker. Your server process is passed as `CMD` argument.
+`saving` command is works as a `ENTRYPOINT` like shell. And also works as a health checker. Your server process is passed as `CMD` argument. You can copy prebuild binary from `ghcr.io/shibukawa/saving:latest` image or build it from source (See [Dockerfile](https://github.com/shibukawa/saving/blob/main/Dockerfile)).
 
 `saving` command is a reverse proxy. It waits for incoming requests and starts your server process when request is coming. It waits for the server process to finish and then goes to sleep again.
 
