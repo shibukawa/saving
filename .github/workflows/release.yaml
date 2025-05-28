@@ -43,6 +43,7 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./saving-linux-amd64
           asset_name: saving-linux-amd64
+          asset_content_type: application/octet-stream 
 
       - name: Build for Windows (amd64)
         run: |
@@ -56,6 +57,7 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./saving-windows-amd64.exe
           asset_name: saving-windows-amd64.exe
+          asset_content_type: application/octet-stream 
 
       - name: Build for macOS (arm64)
         run: |
@@ -69,3 +71,4 @@ jobs:
           upload_url: ${{ steps.create_release.outputs.upload_url }}
           asset_path: ./saving-darwin-arm64
           asset_name: saving-darwin-arm64
+          asset_content_type: application/octet-stream 
